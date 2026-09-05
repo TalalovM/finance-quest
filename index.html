@@ -1,355 +1,174 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Quest</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceGame</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Библиотека Chart.js для отрисовки динамического графика -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="app">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="logo">
-            <span>₿</span>
-            Finance Quest
-        </div>
 
-        <nav>
-            <button class="nav-btn active" onclick="showPage('dashboard')">
-                🏠 Главная
-            </button>
+  <div class="app-container">
+    <div class="content-area">
+      
+      <!-- ЭКРАН 1: ГЛАВНАЯ -->
+      <div id="main-tab" class="tab-content active">
+        <div class="header-title">МОЙ БАЛАНС</div>
+        <div class="balance-amount" id="net-balance">0 ₸</div>
+        <div class="balance-subtext" id="distance-to-zero">До финансового нуля: 0 ₸</div>
 
-            <button class="nav-btn" onclick="showPage('operations')">
-                📜 Операции
-            </button>
-
-            <button class="nav-btn" onclick="showPage('debts')">
-                💳 Долги
-            </button>
-
-            <button class="nav-btn" onclick="showPage('goals')">
-                🎯 Цели
-            </button>
-        </nav>
-
+        <!-- Игровая шкала уровня -->
         <div class="level-card">
-            <div class="level-title">
-                FINANCIAL LEVEL
-            </div>
-
-            <div class="level-number" id="level">
-                1
-            </div>
-
-            <div class="level-name" id="levelName">
-                Новичок
-            </div>
-
-            <div class="xp-bar">
-                <div id="xpBar"></div>
-            </div>
-
-            <small id="xpText">0 / 100 XP</small>
-        </div>
-    </aside>
-
-
-    <!-- MAIN -->
-    <main class="main">
-
-        <header class="topbar">
-            <div>
-                <h1>Финансовый центр</h1>
-                <p>Контролируй деньги. Закрывай долги. Расти.</p>
-            </div>
-
-            <button class="add-button" onclick="openModal()">
-                + Добавить
-            </button>
-        </header>
-
-
-        <!-- DASHBOARD -->
-        <section id="dashboard" class="page">
-
-            <!-- BALANCE -->
-            <div class="balance-card">
-
-                <div>
-                    <p class="label">ОБЩИЙ ФИНАНСОВЫЙ БАЛАНС</p>
-
-                    <h2 id="totalBalance">
-                        0 ₸
-                    </h2>
-
-                    <p id="balanceStatus" class="status">
-                        Начни вести свои финансы
-                    </p>
-                </div>
-
-                <div class="balance-icon">
-                    💰
-                </div>
-
-            </div>
-
-
-            <!-- CARDS -->
-            <div class="cards">
-
-                <div class="card">
-                    <div class="card-icon income">↗</div>
-
-                    <div>
-                        <p>Доходы</p>
-                        <h3 id="incomeTotal">0 ₸</h3>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-icon expense">↘</div>
-
-                    <div>
-                        <p>Расходы</p>
-                        <h3 id="expenseTotal">0 ₸</h3>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-icon debt">💳</div>
-
-                    <div>
-                        <p>Долги</p>
-                        <h3 id="debtTotal">0 ₸</h3>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-icon cash">💵</div>
-
-                    <div>
-                        <p>Деньги</p>
-                        <h3 id="moneyTotal">0 ₸</h3>
-                    </div>
-                </div>
-
-            </div>
-
-
-            <!-- PROGRESS -->
-            <div class="section-card">
-
-                <div class="section-header">
-                    <div>
-                        <h2>Путь к финансовому плюсу</h2>
-                        <p>Твоя цель — выйти в положительный баланс</p>
-                    </div>
-
-                    <strong id="progressPercent">
-                        0%
-                    </strong>
-                </div>
-
-                <div class="big-progress">
-                    <div id="financialProgress"></div>
-                </div>
-
-                <div class="progress-info">
-                    <span>Текущий баланс</span>
-                    <span id="progressMoney">0 ₸</span>
-                </div>
-
-            </div>
-
-
-            <!-- RECENT -->
-            <div class="section-card">
-
-                <div class="section-header">
-                    <h2>Последние операции</h2>
-
-                    <button onclick="showPage('operations')" class="link-btn">
-                        Все операции →
-                    </button>
-                </div>
-
-                <div id="recentOperations">
-                    <div class="empty">
-                        Пока нет операций
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- OPERATIONS -->
-        <section id="operations" class="page hidden">
-
-            <div class="section-card">
-
-                <div class="section-header">
-                    <div>
-                        <h2>Все операции</h2>
-                        <p>Твоя финансовая история</p>
-                    </div>
-
-                    <button class="add-button" onclick="openModal()">
-                        + Операция
-                    </button>
-                </div>
-
-                <div id="operationsList"></div>
-
-            </div>
-
-        </section>
-
-
-        <!-- DEBTS -->
-        <section id="debts" class="page hidden">
-
-            <div class="section-card">
-
-                <div class="section-header">
-                    <div>
-                        <h2>💳 Долги и кредиты</h2>
-                        <p>Закрывай задолженности и получай XP</p>
-                    </div>
-
-                    <button class="add-button" onclick="openDebtModal()">
-                        + Добавить долг
-                    </button>
-                </div>
-
-                <div id="debtsList"></div>
-
-            </div>
-
-        </section>
-
-
-        <!-- GOALS -->
-        <section id="goals" class="page hidden">
-
-            <div class="section-card">
-
-                <div class="section-header">
-                    <div>
-                        <h2>🎯 Финансовые цели</h2>
-                        <p>Поставь цель и двигайся к ней</p>
-                    </div>
-                </div>
-
-                <div class="goal">
-                    <div class="goal-top">
-                        <span>💰 Выйти в плюс</span>
-                        <strong id="goalBalance">0 ₸</strong>
-                    </div>
-
-                    <div class="big-progress">
-                        <div id="goalProgress"></div>
-                    </div>
-
-                    <small>Цель: 0 ₸ долгов</small>
-                </div>
-
-            </div>
-
-        </section>
-
-    </main>
-
-</div>
-
-
-<!-- MODAL OPERATION -->
-<div id="modal" class="modal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-            <h2>Новая операция</h2>
-
-            <button onclick="closeModal()">×</button>
+          <div class="level-header">
+            <span id="level-title">УРОВЕНЬ 1</span>
+            <span id="level-percent" style="color: var(--accent-green);">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="level-progress-bar"></div>
+          </div>
+          <div class="progress-labels">
+            <span id="level-min">−2M ₸</span>
+            <span>0 ₸</span>
+            <span id="level-max">+500K ₸</span>
+          </div>
         </div>
 
+        <!-- Плашка мотивации / прогресса -->
+        <div class="motivation-badge" id="motivation-text">
+          🔥 Начни путь к финансовой свободе!
+        </div>
+
+        <!-- Сводка обязательств -->
+        <div class="cards-grid">
+          <div class="debt-card">
+            <div class="icon">💳</div>
+            <div class="title">Кредиты</div>
+            <div class="val" id="sum-credits">0 ₸</div>
+          </div>
+          <div class="debt-card">
+            <div class="icon">🛒</div>
+            <div class="title">Рассрочки</div>
+            <div class="val" id="sum-installments">0 ₸</div>
+          </div>
+          <div class="debt-card">
+            <div class="icon">🤝</div>
+            <div class="title">Людям</div>
+            <div class="val" id="sum-people">0 ₸</div>
+          </div>
+        </div>
+
+        <!-- Следующая цель -->
+        <div class="target-card">
+          <div class="target-title">🎯 Следующая цель</div>
+          <div class="target-name" id="target-name">Погасить рассрочку</div>
+          <div class="target-remaining" id="target-remaining">Осталось 0 ₸</div>
+        </div>
+
+        <!-- Кнопка добавления транзакции -->
+        <button class="btn-add" onclick="openModal()">＋ ДОБАВИТЬ</button>
+      </div>
+
+      <!-- ЭКРАН 2: ДОЛГИ -->
+      <div id="debts-tab" class="tab-content">
+        <div class="header-title">МОИ ОБЯЗАТЕЛЬСТВА</div>
+        <div id="debts-list-container" class="list-container">
+          <!-- Динамически заполнится списком долгов -->
+        </div>
+      </div>
+
+      <!-- ЭКРАН 3: ОПЕРАЦИИ -->
+      <div id="ops-tab" class="tab-content">
+        <div class="header-title">ИСТОРИЯ ОПЕРАЦИЙ</div>
+        <div id="history-list-container" class="list-container">
+          <!-- Динамически заполнится историей -->
+        </div>
+      </div>
+
+      <!-- ЭКРАН 4: ЦЕЛИ -->
+      <div id="goals-tab" class="tab-content">
+        <div class="header-title">ФИНАНСОВЫЕ ЦЕЛИ</div>
+        <div id="goals-list-container" class="list-container">
+          <!-- Динамически заполнится целями -->
+        </div>
+      </div>
+
+      <!-- ЭКРАН 5: СТАТИСТИКА -->
+      <div id="stats-tab" class="tab-content">
+        <div class="header-title">СТАТИСТИКА И ПРОГНОЗ</div>
+        <div class="forecast-card">
+          <div class="forecast-title">🔮 Прогноз выхода из долгов</div>
+          <div class="forecast-text" id="forecast-text">Расчет данных...</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="financeChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Нижняя навигация -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="switchTab('main-tab', this)">
+        <span class="icon">🏠</span>
+        <span>Главная</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('debts-tab', this)">
+        <span class="icon">💳</span>
+        <span>Долги</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('ops-tab', this)">
+        <span class="icon">🔄</span>
+        <span>Операции</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('goals-tab', this)">
+        <span class="icon">🎯</span>
+        <span>Цели</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('stats-tab', this)">
+        <span class="icon">📊</span>
+        <span>Статистика</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Модальное окно добавления операции -->
+  <div class="modal-overlay" id="modal-add">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Новая операция</span>
+        <button class="btn-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="form-group">
         <label>Тип операции</label>
-
-        <select id="operationType">
-            <option value="income">💰 Доход</option>
-            <option value="expense">🛒 Расход</option>
+        <select id="op-type" onchange="toggleDebtSelector()">
+          <option value="debt_payment">💳 Погашение долга</option>
+          <option value="income">💰 Доход</option>
+          <option value="expense">🍔 Расход</option>
         </select>
+      </div>
 
+      <div class="form-group" id="debt-select-group">
+        <label>Выберите долг</label>
+        <select id="op-debt-id"></select>
+      </div>
 
-        <label>Название</label>
+      <div class="form-group">
+        <label>Сумма (₸)</label>
+        <input type="number" id="op-amount" placeholder="Например: 50000" />
+      </div>
 
-        <input
-            id="operationName"
-            type="text"
-            placeholder="Например: Зарплата"
-        >
+      <div class="form-group">
+        <label>Описание / Категория</label>
+        <input type="text" id="op-desc" placeholder="Зарплата, Еда, Оплата долга" />
+      </div>
 
-
-        <label>Сумма</label>
-
-        <input
-            id="operationAmount"
-            type="number"
-            placeholder="100000"
-        >
-
-
-        <button class="save-btn" onclick="addOperation()">
-            Сохранить
-        </button>
-
+      <button class="btn-add" onclick="submitTransaction()">СОХРАНИТЬ</button>
     </div>
+  </div>
 
-</div>
-
-
-<!-- MODAL DEBT -->
-<div id="debtModal" class="modal">
-
-    <div class="modal-box">
-
-        <div class="modal-header">
-            <h2>Новый долг</h2>
-
-            <button onclick="closeDebtModal()">×</button>
-        </div>
-
-        <label>Название</label>
-
-        <input
-            id="debtName"
-            type="text"
-            placeholder="Например: Кредит Kaspi"
-        >
-
-
-        <label>Сумма долга</label>
-
-        <input
-            id="debtAmount"
-            type="number"
-            placeholder="200000"
-        >
-
-
-        <button class="save-btn" onclick="addDebt()">
-            Добавить долг
-        </button>
-
-    </div>
-
-</div>
-
-
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
 </body>
 </html>
