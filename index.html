@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinanceGame</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Библиотека Chart.js для отрисовки динамического графика -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -19,7 +18,6 @@
         <div class="balance-amount" id="net-balance">0 ₸</div>
         <div class="balance-subtext" id="distance-to-zero">До финансового нуля: 0 ₸</div>
 
-        <!-- Игровая шкала уровня -->
         <div class="level-card">
           <div class="level-header">
             <span id="level-title">УРОВЕНЬ 1</span>
@@ -35,12 +33,10 @@
           </div>
         </div>
 
-        <!-- Плашка мотивации / прогресса -->
         <div class="motivation-badge" id="motivation-text">
           🔥 Начни путь к финансовой свободе!
         </div>
 
-        <!-- Сводка обязательств -->
         <div class="cards-grid">
           <div class="debt-card">
             <div class="icon">💳</div>
@@ -59,42 +55,36 @@
           </div>
         </div>
 
-        <!-- Следующая цель -->
         <div class="target-card">
           <div class="target-title">🎯 Следующая цель</div>
-          <div class="target-name" id="target-name">Погасить рассрочку</div>
-          <div class="target-remaining" id="target-remaining">Осталось 0 ₸</div>
+          <div class="target-name" id="target-name">Нет целей</div>
+          <div class="target-remaining" id="target-remaining">Добавьте цель во вкладке "Цели"</div>
         </div>
 
-        <!-- Кнопка добавления транзакции -->
-        <button class="btn-add" onclick="openModal()">＋ ДОБАВИТЬ</button>
+        <button class="btn-add" onclick="openModal('modal-add')">＋ ВНЕСТИ ОПЕРАЦИЮ</button>
       </div>
 
       <!-- ЭКРАН 2: ДОЛГИ -->
       <div id="debts-tab" class="tab-content">
         <div class="header-title">МОИ ОБЯЗАТЕЛЬСТВА</div>
-        <div id="debts-list-container" class="list-container">
-          <!-- Динамически заполнится списком долгов -->
-        </div>
+        <button class="btn-secondary" onclick="openModal('modal-new-debt')">＋ Добавить новый долг</button>
+        <div id="debts-list-container" class="list-container"></div>
       </div>
 
       <!-- ЭКРАН 3: ОПЕРАЦИИ -->
       <div id="ops-tab" class="tab-content">
         <div class="header-title">ИСТОРИЯ ОПЕРАЦИЙ</div>
-        <div id="history-list-container" class="list-container">
-          <!-- Динамически заполнится историей -->
-        </div>
+        <div id="history-list-container" class="list-container"></div>
       </div>
 
       <!-- ЭКРАН 4: ЦЕЛИ -->
       <div id="goals-tab" class="tab-content">
         <div class="header-title">ФИНАНСОВЫЕ ЦЕЛИ</div>
-        <div id="goals-list-container" class="list-container">
-          <!-- Динамически заполнится целями -->
-        </div>
+        <button class="btn-secondary" onclick="openModal('modal-new-goal')">＋ Добавить новую цель</button>
+        <div id="goals-list-container" class="list-container"></div>
       </div>
 
-      <!-- ЭКРАН 5: СТАТИСТИКА -->
+      <!-- ЭКРАН 5: СТАТИСТИКА И НАСТРОЙКИ -->
       <div id="stats-tab" class="tab-content">
         <div class="header-title">СТАТИСТИКА И ПРОГНОЗ</div>
         <div class="forecast-card">
@@ -104,6 +94,9 @@
         <div class="chart-container">
           <canvas id="financeChart"></canvas>
         </div>
+
+        <!-- Кнопка полной очистки данных -->
+        <button class="btn-danger" onclick="resetAllData()">🗑 Очистить все данные</button>
       </div>
 
     </div>
@@ -133,14 +126,13 @@
     </nav>
   </div>
 
-  <!-- Модальное окно добавления операции -->
+  <!-- МОДАЛКА 1: Добавление операции -->
   <div class="modal-overlay" id="modal-add">
     <div class="modal-content">
       <div class="modal-header">
         <span>Новая операция</span>
-        <button class="btn-close" onclick="closeModal()">✕</button>
+        <button class="btn-close" onclick="closeModal('modal-add')">✕</button>
       </div>
-
       <div class="form-group">
         <label>Тип операции</label>
         <select id="op-type" onchange="toggleDebtSelector()">
@@ -149,23 +141,65 @@
           <option value="expense">🍔 Расход</option>
         </select>
       </div>
-
       <div class="form-group" id="debt-select-group">
         <label>Выберите долг</label>
         <select id="op-debt-id"></select>
       </div>
-
       <div class="form-group">
         <label>Сумма (₸)</label>
-        <input type="number" id="op-amount" placeholder="Например: 50000" />
+        <input type="number" id="op-amount" placeholder="50000" />
       </div>
-
       <div class="form-group">
-        <label>Описание / Категория</label>
+        <label>Описание</label>
         <input type="text" id="op-desc" placeholder="Зарплата, Еда, Оплата долга" />
       </div>
-
       <button class="btn-add" onclick="submitTransaction()">СОХРАНИТЬ</button>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА 2: Создание нового долга -->
+  <div class="modal-overlay" id="modal-new-debt">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Добавить долг/кредит</span>
+        <button class="btn-close" onclick="closeModal('modal-new-debt')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="debt-name" placeholder="Например: Кредит Kaspi" />
+      </div>
+      <div class="form-group">
+        <label>Тип обязательства</label>
+        <select id="debt-type">
+          <option value="credit">💳 Кредит</option>
+          <option value="installment">🛒 Рассрочка</option>
+          <option value="person">🤝 Долг человеку</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Текущая сумма долга (₸)</label>
+        <input type="number" id="debt-amount" placeholder="500000" />
+      </div>
+      <button class="btn-add" onclick="addNewDebt()">СОЗДАТЬ</button>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА 3: Создание цели -->
+  <div class="modal-overlay" id="modal-new-goal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Новая цель</span>
+        <button class="btn-close" onclick="closeModal('modal-new-goal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Название цели</label>
+        <input type="text" id="goal-name" placeholder="Например: Ремонт авто" />
+      </div>
+      <div class="form-group">
+        <label>Необходимая сумма (₸)</label>
+        <input type="number" id="goal-target" placeholder="300000" />
+      </div>
+      <button class="btn-add" onclick="addNewGoal()">СОЗДАТЬ</button>
     </div>
   </div>
 
