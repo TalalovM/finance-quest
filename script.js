@@ -363,10 +363,8 @@ function updateOperations() {
 
 
 function createOperationHTML(operation) {
-
-    const income =
-        operation.type === "income";
-    return 
+    const income = operation.type === "income";
+    return `
         <div class="operation">
             <div class="operation-left">
                 <div class="operation-icon">
@@ -381,17 +379,12 @@ function createOperationHTML(operation) {
                     </div>
                 </div>
             </div>
-            <div class="${income
-                ? "income-text"
-                : "expense-text"}">
+            <div class="${income ? "income-text" : "expense-text"}">
                 ${income ? "+" : "-"}
                 ${formatMoney(operation.amount)}
-
             </div>
-
         </div>
-
-    ;
+    `;
 }
 
 
