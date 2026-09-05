@@ -1,632 +1,269 @@
-// ==========================================
-// FINANCE QUEST
-// ==========================================
+// Начальное состояние приложения по умолчанию
+const initialState = {
+  cash: 150000,
+  savings: 50000,
+  debts: [
+    { id: "d1", name: "Кредит", type: "credit", balance: 950000, initial: 1000000 },
+    { id: "d2", name: "Рассрочка", type: "installment", balance: 197500, initial: 197500 },
+    { id: "d3", name: "Долг человеку", type: "person", balance: 100000, initial: 100000 }
+  ],
+  goals: [
+    { id: "g1", name: "Погасить рассрочку", target: 197500, current: 150000 }
+  ],
+  history: [
+    { date: "2026-09-01", type: "income", title: "Зарплата", amount: 300000 },
+    { date: "2026-09-02", type: "debt_payment", title: "Частичный платёж долга", amount: 50000 }
+  ],
+  chartHistory: [-1800000, -1500000, -1247500]
+};
 
+// Загрузка или инициализация состояния
+let appState = JSON.parse(localStorage.getItem('financeGameData')) || initialState;
 
-// ДАННЫЕ
-let operations = JSON.parse(
-    localStorage.getItem("operations")
-) || [];
-
-let debts = JSON.parse(
-    localStorage.getItem("debts")
-) || [];
-
-
-// ==========================================
-// СТРАНИЦЫ
-// ==========================================
-
-function showPage(page) {
-
-    document.querySelectorAll(".page").forEach(
-        element => element.classList.add("hidden")
-    );
-
-    document
-        .getElementById(page)
-        .classList.remove("hidden");
-
-
-    document.querySelectorAll(".nav-btn").forEach(
-        button => button.classList.remove("active")
-    );
-
-
-    const buttons = document.querySelectorAll(".nav-btn");
-
-    if (page === "dashboard") buttons[0].classList.add("active");
-    if (page === "operations") buttons[1].classList.add("active");
-    if (page === "debts") buttons[2].classList.add("active");
-    if (page === "goals") buttons[3].classList.add("active");
+function saveData() {
+  localStorage.setItem('financeGameData', JSON.stringify(appState));
+  updateUI();
 }
 
+// Пороговые значения уровней
+const levels = [
+  { level: 1, min: -Infinity, max: -1500000, labelMin: "−∞", labelMax: "−1.5M" },
+  { level: 2, min: -1500000, max: -1000000, labelMin: "−1.5M", labelMax: "−1M" },
+  { level: 3, min: -1000000, max: -500000, labelMin: "−1M", labelMax: "−500K" },
+  { level: 4, min: -500000, max: 0, labelMin: "−500K", labelMax: "0 ₸" },
+  { level: 5, min: 0, max: 500000, labelMin: "0 ₸", labelMax: "+500K" },
+  { level: 6, min: 500000, max: Infinity, labelMin: "+500K", labelMax: "+∞" }
+];
 
-// ==========================================
-// МОДАЛКА
-// ==========================================
+// Главный пересчёт и обновление интерфейса
+function updateUI() {
+  const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
+  const totalAssets = appState.cash + appState.savings;
+  const netBalance = totalAssets - totalDebts;
 
+  // 1. Отображение баланса
+  const balanceEl = document.getElementById('net-balance');
+  balanceEl.innerText = `${netBalance.toLocaleString('ru-RU')} ₸`;
+  balanceEl.className = `balance-amount ${netBalance < 0 ? 'negative' : 'positive'}`;
+
+  const distEl = document.getElementById('distance-to-zero');
+  if (netBalance < 0) {
+    distEl.innerText = `До финансового нуля: ${Math.abs(netBalance).toLocaleString('ru-RU')} ₸`;
+  } else {
+    distEl.innerText = `🏆 Вы в положительном балансе!`;
+  }
+
+  // 2. Расчет уровня
+  let currentLvl = levels[2]; // по умолчанию ур.3
+  for (let l of levels) {
+    if (netBalance >= l.min && netBalance < l.max) {
+      currentLvl = l;
+      break;
+    }
+  }
+
+  document.getElementById('level-title').innerText = `УРОВЕНЬ ${currentLvl.level}`;
+  document.getElementById('level-min').innerText = currentLvl.labelMin;
+  document.getElementById('level-max').innerText = currentLvl.labelMax;
+
+  // Процент внутри уровня
+  let percent = 0;
+  if (isFinite(currentLvl.min) && isFinite(currentLvl.max)) {
+    const range = currentLvl.max - currentLvl.min;
+    const progress = netBalance - currentLvl.min;
+    percent = Math.min(Math.max(Math.round((progress / range) * 100), 0), 100);
+  } else {
+    percent = 100;
+  }
+  document.getElementById('level-percent').innerText = `${percent}%`;
+  document.getElementById('level-progress-bar').style.width = `${percent}%`;
+
+  // 3. Подведение итогов по категориям
+  const credits = appState.debts.filter(d => d.type === 'credit').reduce((s, i) => s + i.balance, 0);
+  const installments = appState.debts.filter(d => d.type === 'installment').reduce((s, i) => s + i.balance, 0);
+  const people = appState.debts.filter(d => d.type === 'person').reduce((s, i) => s + i.balance, 0);
+
+  document.getElementById('sum-credits').innerText = `${credits.toLocaleString('ru-RU')} ₸`;
+  document.getElementById('sum-installments').innerText = `${installments.toLocaleString('ru-RU')} ₸`;
+  document.getElementById('sum-people').innerText = `${people.toLocaleString('ru-RU')} ₸`;
+
+  // 4. Обновление текущей цели
+  if (appState.goals.length > 0) {
+    const goal = appState.goals[0];
+    const rem = goal.target - goal.current;
+    document.getElementById('target-name').innerText = goal.name;
+    document.getElementById('target-remaining').innerText = `Осталось ${rem.toLocaleString('ru-RU')} ₸`;
+  }
+
+  // 5. Обновление списков
+  renderDebtsList();
+  renderHistoryList();
+  renderGoalsList();
+  renderForecast(netBalance);
+}
+
+// Отрисовка списков
+function renderDebtsList() {
+  const container = document.getElementById('debts-list-container');
+  container.innerHTML = appState.debts.map(d => `
+    <div class="list-item">
+      <div>
+        <div class="item-title">${d.name}</div>
+        <div class="item-sub">Первоначально: ${d.initial.toLocaleString()} ₸</div>
+      </div>
+      <div class="item-val" style="color: var(--accent-red);">${d.balance.toLocaleString()} ₸</div>
+    </div>
+  `).join('');
+}
+
+function renderHistoryList() {
+  const container = document.getElementById('history-list-container');
+  container.innerHTML = appState.history.slice().reverse().map(h => `
+    <div class="list-item">
+      <div>
+        <div class="item-title">${h.title}</div>
+        <div class="item-sub">${h.date}</div>
+      </div>
+      <div class="item-val" style="color: ${h.type === 'income' ? 'var(--accent-green)' : 'var(--text-main)'};">
+        ${h.type === 'income' ? '+' : '−'}${h.amount.toLocaleString()} ₸
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderGoalsList() {
+  const container = document.getElementById('goals-list-container');
+  container.innerHTML = appState.goals.map(g => `
+    <div class="list-item">
+      <div>
+        <div class="item-title">${g.name}</div>
+        <div class="item-sub">Собрано: ${g.current.toLocaleString()} ₸ из ${g.target.toLocaleString()} ₸</div>
+      </div>
+      <div class="item-val" style="color: var(--accent-green);">${Math.round((g.current/g.target)*100)}%</div>
+    </div>
+  `).join('');
+}
+
+function renderForecast(netBalance) {
+  const el = document.getElementById('forecast-text');
+  if (netBalance >= 0) {
+    el.innerHTML = "🎉 <b>Вы достигли положительного баланса!</b> Продолжайте инвестировать.";
+  } else {
+    const monthlyRate = 100000; // Примерный ежемесячный темп гашения
+    const months = Math.ceil(Math.abs(netBalance) / monthlyRate);
+    el.innerHTML = `При сохранении динамики гашения ~100 000 ₸/мес вы выйдете в <b>0 ₸</b> примерно через <b>${months} мес.</b>`;
+  }
+}
+
+// Управление модальным окном
 function openModal() {
-    document.getElementById("modal").classList.add("show");
+  const select = document.getElementById('op-debt-id');
+  select.innerHTML = appState.debts.map(d => `<option value="${d.id}">${d.name} (остаток: ${d.balance.toLocaleString()} ₸)</option>`).join('');
+  document.getElementById('modal-add').classList.add('open');
+  toggleDebtSelector();
 }
 
 function closeModal() {
-    document.getElementById("modal").classList.remove("show");
+  document.getElementById('modal-add').classList.remove('open');
 }
 
-
-function openDebtModal() {
-    document.getElementById("debtModal").classList.add("show");
+function toggleDebtSelector() {
+  const type = document.getElementById('op-type').value;
+  document.getElementById('debt-select-group').style.display = type === 'debt_payment' ? 'block' : 'none';
 }
 
-function closeDebtModal() {
-    document.getElementById("debtModal").classList.remove("show");
-}
+// Добавление новой транзакции
+function submitTransaction() {
+  const type = document.getElementById('op-type').value;
+  const amount = Number(document.getElementById('op-amount').value);
+  const desc = document.getElementById('op-desc').value || 'Операция';
 
+  if (!amount || amount <= 0) return alert('Введите корректную сумму');
 
-// ==========================================
-// ДОБАВЛЕНИЕ ОПЕРАЦИИ
-// ==========================================
-
-function addOperation() {
-
-    const type =
-        document.getElementById("operationType").value;
-
-    const name =
-        document.getElementById("operationName").value;
-
-    const amount =
-        Number(document.getElementById("operationAmount").value);
-
-
-    if (!name || !amount || amount <= 0) {
-        alert("Заполни название и сумму");
-        return;
+  if (type === 'debt_payment') {
+    const debtId = document.getElementById('op-debt-id').value;
+    const debt = appState.debts.find(d => d.id === debtId);
+    if (debt) {
+      debt.balance = Math.max(0, debt.balance - amount);
     }
+  } else if (type === 'income') {
+    appState.cash += amount;
+  } else if (type === 'expense') {
+    appState.cash -= amount;
+  }
 
+  // Фиксация в истории
+  appState.history.push({
+    date: new Date().toISOString().split('T')[0],
+    type: type,
+    title: desc,
+    amount: amount
+  });
 
-    const operation = {
+  // Расчет нового баланса для графика
+  const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
+  const totalAssets = appState.cash + appState.savings;
+  appState.chartHistory.push(totalAssets - totalDebts);
 
-        id: Date.now(),
-
-        type: type,
-
-        name: name,
-
-        amount: amount,
-
-        date: new Date().toLocaleDateString("ru-RU")
-
-    };
-
-
-    operations.unshift(operation);
-
-
-    saveData();
-
-    closeModal();
-
-    document.getElementById("operationName").value = "";
-    document.getElementById("operationAmount").value = "";
-
-    updateUI();
+  closeModal();
+  saveData();
 }
 
+// Переключение вкладок
+function switchTab(tabId, element) {
+  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.add('active');
+  element.classList.add('active');
 
-// ==========================================
-// ДОБАВЛЕНИЕ ДОЛГА
-// ==========================================
+  if(tabId === 'stats-tab') {
+    renderChart();
+  }
+}
 
-function addDebt() {
+// Отрисовка графика Chart.js с нулевой линией посередине
+let chartInstance = null;
+function renderChart() {
+  if (chartInstance) chartInstance.destroy();
 
-    const name =
-        document.getElementById("debtName").value;
-
-    const amount =
-        Number(document.getElementById("debtAmount").value);
-
-
-    if (!name || !amount || amount <= 0) {
-        alert("Заполни название и сумму");
-        return;
+  const ctx = document.getElementById('financeChart').getContext('2d');
+  
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: appState.chartHistory.map((_, i) => `Шаг ${i + 1}`),
+      datasets: [{
+        label: 'Чистый баланс (₸)',
+        data: appState.chartHistory,
+        borderColor: '#2ecc71',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#2ecc71'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          grid: {
+            color: (context) => context.tick.value === 0 ? '#ffffff' : '#262a34',
+            lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+          },
+          ticks: {
+            color: '#8a8f99',
+            callback: (value) => value.toLocaleString('ru-RU') + ' ₸'
+          }
+        },
+        x: { grid: { display: false }, ticks: { color: '#8a8f99' } }
+      },
+      plugins: { legend: { display: false } }
     }
-
-
-    const debt = {
-
-        id: Date.now(),
-
-        name: name,
-
-        amount: amount,
-
-        originalAmount: amount
-
-    };
-
-
-    debts.push(debt);
-
-
-    saveData();
-
-    closeDebtModal();
-
-    document.getElementById("debtName").value = "";
-    document.getElementById("debtAmount").value = "";
-
-    updateUI();
+  });
 }
 
-
-// ==========================================
-// СОХРАНЕНИЕ
-// ==========================================
-
-function saveData() {
-
-    localStorage.setItem(
-        "operations",
-        JSON.stringify(operations)
-    );
-
-    localStorage.setItem(
-        "debts",
-        JSON.stringify(debts)
-    );
-}
-
-
-// ==========================================
-// РАСЧЕТЫ
-// ==========================================
-
-function calculate() {
-
-    let income = 0;
-
-    let expense = 0;
-
-
-    operations.forEach(operation => {
-
-        if (operation.type === "income") {
-            income += operation.amount;
-        }
-
-        if (operation.type === "expense") {
-            expense += operation.amount;
-        }
-
-    });
-
-
-    const money = income - expense;
-
-
-    const debt = debts.reduce(
-        (sum, item) => sum + item.amount,
-        0
-    );
-
-
-    // Главная формула
-    const balance = money - debt;
-
-
-    return {
-        income,
-        expense,
-        money,
-        debt,
-        balance
-    };
-}
-
-
-// ==========================================
-// ОБНОВЛЕНИЕ DASHBOARD
-// ==========================================
-
-function updateDashboard() {
-
-    const data = calculate();
-
-
-    document.getElementById("incomeTotal")
-        .textContent = formatMoney(data.income);
-
-
-    document.getElementById("expenseTotal")
-        .textContent = formatMoney(data.expense);
-
-
-    document.getElementById("debtTotal")
-        .textContent = formatMoney(data.debt);
-
-
-    document.getElementById("moneyTotal")
-        .textContent = formatMoney(data.money);
-
-
-    const balanceElement =
-        document.getElementById("totalBalance");
-
-
-    balanceElement.textContent =
-        formatMoney(data.balance);
-
-
-    const status =
-        document.getElementById("balanceStatus");
-
-
-    if (data.balance > 0) {
-
-        status.textContent =
-            "🟢 Ты в плюсе. Продолжай в том же духе!";
-
-    } else if (data.balance < 0) {
-
-        status.textContent =
-            "🔴 Ты в минусе. Твоя цель — выйти в 0 ₸";
-
-    } else {
-
-        status.textContent =
-            "🟡 Ты вышел ровно в 0 ₸";
-
-    }
-
-
-    document.getElementById("progressMoney")
-        .textContent = formatMoney(data.balance);
-
-
-    // Прогресс к нулю
-    let progress = 0;
-
-    if (data.balance >= 0) {
-
-        progress = 100;
-
-    } else if (data.debt > 0) {
-
-        progress =
-            Math.max(
-                0,
-                Math.min(
-                    100,
-                    ((data.money) / data.debt) * 100
-                )
-            );
-
-    }
-
-
-    document.getElementById("financialProgress")
-        .style.width = progress + "%";
-
-
-    document.getElementById("progressPercent")
-        .textContent = Math.round(progress) + "%";
-
-
-    document.getElementById("goalBalance")
-        .textContent = formatMoney(data.balance);
-
-
-    document.getElementById("goalProgress")
-        .style.width = progress + "%";
-}
-
-
-// ==========================================
-// ОПЕРАЦИИ
-// ==========================================
-
-function updateOperations() {
-
-    const container =
-        document.getElementById("operationsList");
-
-    const recent =
-        document.getElementById("recentOperations");
-
-
-    if (operations.length === 0) {
-
-        container.innerHTML =
-            '<div class="empty">Пока нет операций</div>';
-
-        recent.innerHTML =
-            '<div class="empty">Пока нет операций</div>';
-
-        return;
-    }
-
-
-    container.innerHTML =
-        operations.map(operation => createOperationHTML(operation))
-        .join("");
-
-
-    recent.innerHTML =
-        operations
-            .slice(0, 5)
-            .map(operation => createOperationHTML(operation))
-            .join("");
-}
-
-
-function createOperationHTML(operation) {
-    const income = operation.type === "income";
-    return `
-        <div class="operation">
-            <div class="operation-left">
-                <div class="operation-icon">
-                    ${income ? "↗" : "↘"}
-                </div>
-                <div>
-                    <div>
-                        ${escapeHTML(operation.name)}
-                    </div>
-                    <div class="operation-date">
-                        ${operation.date}
-                    </div>
-                </div>
-            </div>
-            <div class="${income ? "income-text" : "expense-text"}">
-                ${income ? "+" : "-"}
-                ${formatMoney(operation.amount)}
-            </div>
-        </div>
-    `;
-}
-
-
-// ==========================================
-// ДОЛГИ
-// ==========================================
-
-function updateDebts() {
-
-    const container =
-        document.getElementById("debtsList");
-
-
-    if (debts.length === 0) {
-
-        container.innerHTML =
-            '<div class="empty">У тебя пока нет долгов 🎉</div>';
-
-        return;
-    }
-
-
-    container.innerHTML = debts.map(debt => {
-        return `
-            <div class="debt">
-                <div class="debt-top">
-                    <div class="debt-name">
-                        💳 ${escapeHTML(debt.name)}
-                    </div>
-                    <div class="debt-amount">
-                        ${formatMoney(debt.amount)}
-                    </div>
-                </div>
-                <button onclick="payDebt(${debt.id})">
-                    💰 Погасить
-                </button>
-                <button onclick="deleteDebt(${debt.id})">
-                    Удалить
-                </button>
-            </div>
-        `;
-    }).join("");
-}
-
-
-// ==========================================
-// ПОГАШЕНИЕ ДОЛГА
-// ==========================================
-
-function payDebt(id) {
-
-    const debt =
-        debts.find(item => item.id === id);
-
-
-    if (!debt) return;
-
-
-    const payment =
-        Number(
-            prompt(
-                `Сколько погашаешь из ${formatMoney(debt.amount)}?`
-            )
-        );
-
-
-    if (!payment || payment <= 0) return;
-
-    const debtName = debt.name;
-
-
-    if (payment >= debt.amount) {
-
-        debts =
-            debts.filter(item => item.id !== id);
-
-    } else {
-
-        debt.amount -= payment;
-
-    }
-
-
-    // Добавляем расход
-    operations.unshift({
-
-        id: Date.now(),
-
-        type: "expense",
-
-        name: `Погашение: ${debtName}`,
-
-        amount: payment,
-
-        date: new Date().toLocaleDateString("ru-RU")
-
-    });
-
-
-    saveData();
-
-    updateUI();
-}
-
-
-// ==========================================
-// УДАЛЕНИЕ ДОЛГА
-// ==========================================
-
-function deleteDebt(id) {
-
-    if (!confirm("Удалить этот долг?")) return;
-
-
-    debts =
-        debts.filter(item => item.id !== id);
-
-
-    saveData();
-
-    updateUI();
-}
-
-
-// ==========================================
-// УРОВЕНЬ
-// ==========================================
-
-function updateLevel() {
-
-    const data = calculate();
-
-
-    let level;
-
-
-    if (data.balance < -1000000) {
-        level = 1;
-    } else if (data.balance < -500000) {
-        level = 2;
-    } else if (data.balance < -250000) {
-        level = 3;
-    } else if (data.balance < 0) {
-        level = 4;
-    } else if (data.balance < 100000) {
-        level = 5;
-    } else if (data.balance < 500000) {
-        level = 6;
-    } else if (data.balance < 1000000) {
-        level = 7;
-    } else if (data.balance < 5000000) {
-        level = 8;
-    } else {
-        level = 10;
-    }
-
-
-    const names = {
-
-        1: "Финансовая жопа",
-        2: "Выживание",
-        3: "Борьба с долгами",
-        4: "Почти в нуле",
-        5: "Первые деньги",
-        6: "Стабильность",
-        7: "Финансовая подушка",
-        8: "Капитал",
-        10: "Финансовый босс"
-
-    };
-
-
-    document.getElementById("level")
-        .textContent = level;
-
-
-    document.getElementById("levelName")
-        .textContent = names[level];
-
-
-    const xp = Math.min(
-        100,
-        Math.max(
-            0,
-            ((data.balance % 100000) + 100000) / 1000
-        )
-    );
-
-
-    document.getElementById("xpBar")
-        .style.width = xp + "%";
-
-
-    document.getElementById("xpText")
-        .textContent =
-        Math.round(xp) + " / 100 XP";
-}
-
-
-// ==========================================
-// ФОРМАТ ДЕНЕГ
-// ==========================================
-
-function formatMoney(number) {
-
-    return new Intl.NumberFormat(
-        "ru-RU"
-    ).format(Math.round(number)) + " ₸";
-}
-
-
-// ==========================================
-// ЗАЩИТА ТЕКСТА
-// ==========================================
-
-function escapeHTML(text) {
-
-    const div = document.createElement("div");
-
-    div.textContent = text;
-
-    return div.innerHTML;
-}
-
-
-// ==========================================
-// ОБНОВЛЕНИЕ ВСЕГО
-// ==========================================
-
-function updateUI() {
-
-    updateDashboard();
-
-    updateOperations();
-
-    updateDebts();
-
-    updateLevel();
-}
-
-
-// ==========================================
-// СТАРТ
-// ==========================================
-
+// Инициализация при запуске
 updateUI();
