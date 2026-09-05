@@ -1,15 +1,15 @@
-// Начальное пустое состояние
+// Начальное состояние
 const emptyState = {
   cash: 0,
   savings: 0,
-  monthlyPayoffRate: 100000, // Динамика погашения по умолчанию
+  monthlyPayoffRate: 100000,
   debts: [],
   goals: [],
   history: [],
   chartHistory: [0]
 };
 
-// Загрузка состояния из памяти браузера
+// Загрузка данных
 let appState = JSON.parse(localStorage.getItem('financeGameData')) || emptyState;
 
 if (!appState.monthlyPayoffRate) {
@@ -31,7 +31,6 @@ const levels = [
   { level: 6, min: 500000, max: Infinity, labelMin: "+500K", labelMax: "+∞" }
 ];
 
-// Полный сброс всех данных
 function resetAllData() {
   if (confirm("Вы уверены, что хотите полностью очистить все данные? Это действие нельзя отменить.")) {
     localStorage.removeItem('financeGameData');
@@ -40,14 +39,14 @@ function resetAllData() {
   }
 }
 
-// Изменение суммы динамики погашения пользователем
 function changeMonthlyRate(value) {
   const rate = Number(value);
   if (rate >= 0) {
     appState.monthlyPayoffRate = rate;
     localStorage.setItem('financeGameData', JSON.stringify(appState));
     const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
-    const totalAssets = appState.cash + appState.savings;
+    const totalSavings = appState.goals.reduce((sum, item) => sum + item.current, 0);
+    const totalAssets = appState.cash + totalSavings;
     renderForecast(totalAssets - totalDebts);
   }
 }
@@ -55,7 +54,8 @@ function changeMonthlyRate(value) {
 // Обновление UI
 function updateUI() {
   const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
-  const totalAssets = appState.cash + appState.savings;
+  const totalSavings = appState.goals.reduce((sum, item) => sum + item.current, 0);
+  const totalAssets = appState.cash + totalSavings;
   const netBalance = totalAssets - totalDebts;
 
   // 1. Баланс
@@ -103,18 +103,17 @@ function updateUI() {
   document.getElementById('sum-installments').innerText = `${installments.toLocaleString('ru-RU')} ₸`;
   document.getElementById('sum-people').innerText = `${people.toLocaleString('ru-RU')} ₸`;
 
-  // 4. Активная цель
+  // 4. Активная цель на главном экране
   if (appState.goals.length > 0) {
     const goal = appState.goals[0];
-    const rem = goal.target - goal.current;
+    const rem = Math.max(0, goal.target - goal.current);
     document.getElementById('target-name').innerText = goal.name;
-    document.getElementById('target-remaining').innerText = `Осталось ${rem.toLocaleString('ru-RU')} ₸`;
+    document.getElementById('target-remaining').innerText = rem > 0 ? `Осталось ${rem.toLocaleString('ru-RU')} ₸` : `🎉 Цель достигнута!`;
   } else {
     document.getElementById('target-name').innerText = "Нет активных целей";
     document.getElementById('target-remaining').innerText = "Добавьте цель во вкладке Цели";
   }
 
-  // Обновление поля темпа гашения
   const rateInput = document.getElementById('monthly-rate-input');
   if (rateInput) rateInput.value = appState.monthlyPayoffRate;
 
@@ -153,8 +152,8 @@ function renderHistoryList() {
         <div class="item-title">${h.title}</div>
         <div class="item-sub">${h.date}</div>
       </div>
-      <div class="item-val" style="color: ${h.type === 'income' ? 'var(--accent-green)' : 'var(--text-main)'};">
-        ${h.type === 'income' ? '+' : '−'}${h.amount.toLocaleString()} ₸
+      <div class="item-val" style="color: ${h.type === 'income' || h.type === 'goal_payment' ? 'var(--accent-green)' : 'var(--text-main)'};">
+        ${h.type === 'income' || h.type === 'goal_payment' ? '+' : '−'}${h.amount.toLocaleString()} ₸
       </div>
     </div>
   `).join('');
@@ -172,12 +171,11 @@ function renderGoalsList() {
         <div class="item-title">${g.name}</div>
         <div class="item-sub">Собрано: ${g.current.toLocaleString()} ₸ из ${g.target.toLocaleString()} ₸</div>
       </div>
-      <div class="item-val" style="color: var(--accent-green);">${Math.round((g.current/g.target)*100)}%</div>
+      <div class="item-val" style="color: var(--accent-green);">${Math.min(100, Math.round((g.current/g.target)*100))}%</div>
     </div>
   `).join('');
 }
 
-// Пересчет прогноза с использованием пользовательской суммы
 function renderForecast(netBalance) {
   const el = document.getElementById('forecast-text');
   if (netBalance >= 0) {
@@ -196,12 +194,23 @@ function renderForecast(netBalance) {
 // Модальные окна
 function openModal(id) {
   if(id === 'modal-add') {
-    const select = document.getElementById('op-debt-id');
+    // Селектор долгов
+    const debtSelect = document.getElementById('op-debt-id');
     if (appState.debts.length > 0) {
-      select.innerHTML = appState.debts.map(d => `<option value="${d.id}">${d.name} (${d.balance.toLocaleString()} ₸)</option>`).join('');
+      debtSelect.innerHTML = appState.debts.map(d => `<option value="${d.id}">${d.name} (${d.balance.toLocaleString()} ₸)</option>`).join('');
     } else {
-      select.innerHTML = `<option value="">Нет активных долгов</option>`;
+      debtSelect.innerHTML = `<option value="">Нет активных долгов</option>`;
     }
+
+    // Селектор целей
+    const goalSelect = document.getElementById('op-goal-id');
+    if (appState.goals.length > 0) {
+      goalSelect.innerHTML = appState.goals.map(g => `<option value="${g.id}">${g.name} (собрано ${g.current.toLocaleString()} ₸)</option>`).join('');
+    } else {
+      goalSelect.innerHTML = `<option value="">Нет активных целей</option>`;
+    }
+
+    toggleOperationType();
   }
   document.getElementById(id).classList.add('open');
 }
@@ -210,12 +219,13 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
 }
 
-function toggleDebtSelector() {
+// Переключение видимости выпадающих списков
+function toggleOperationType() {
   const type = document.getElementById('op-type').value;
   document.getElementById('debt-select-group').style.display = type === 'debt_payment' ? 'block' : 'none';
+  document.getElementById('goal-select-group').style.display = type === 'goal_payment' ? 'block' : 'none';
 }
 
-// Создание нового долга
 function addNewDebt() {
   const name = document.getElementById('debt-name').value;
   const type = document.getElementById('debt-type').value;
@@ -236,10 +246,10 @@ function addNewDebt() {
   saveData();
 }
 
-// Создание новой цели
 function addNewGoal() {
   const name = document.getElementById('goal-name').value;
   const target = Number(document.getElementById('goal-target').value);
+  const current = Number(document.getElementById('goal-current').value) || 0;
 
   if (!name || !target) return alert('Заполните все поля');
 
@@ -247,14 +257,14 @@ function addNewGoal() {
     id: "g_" + Date.now(),
     name: name,
     target: target,
-    current: 0
+    current: current
   });
 
+  recalculateChartHistory();
   closeModal('modal-new-goal');
   saveData();
 }
 
-// Пополнение / расход / погашение
 function submitTransaction() {
   const type = document.getElementById('op-type').value;
   const amount = Number(document.getElementById('op-amount').value);
@@ -265,7 +275,13 @@ function submitTransaction() {
   if (type === 'debt_payment') {
     const debtId = document.getElementById('op-debt-id').value;
     const debt = appState.debts.find(d => d.id === debtId);
-    if (debt) debt.balance = Math.max(0, debt.balance - amount);
+    if (!debt) return alert('Выберите долг');
+    debt.balance = Math.max(0, debt.balance - amount);
+  } else if (type === 'goal_payment') {
+    const goalId = document.getElementById('op-goal-id').value;
+    const goal = appState.goals.find(g => g.id === goalId);
+    if (!goal) return alert('Выберите цель');
+    goal.current += amount;
   } else if (type === 'income') {
     appState.cash += amount;
   } else if (type === 'expense') {
@@ -286,7 +302,8 @@ function submitTransaction() {
 
 function recalculateChartHistory() {
   const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
-  const totalAssets = appState.cash + appState.savings;
+  const totalSavings = appState.goals.reduce((sum, item) => sum + item.current, 0);
+  const totalAssets = appState.cash + totalSavings;
   appState.chartHistory.push(totalAssets - totalDebts);
 }
 
