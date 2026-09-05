@@ -1,24 +1,15 @@
-// Начальное состояние приложения по умолчанию
-const initialState = {
-  cash: 150000,
-  savings: 50000,
-  debts: [
-    { id: "d1", name: "Кредит", type: "credit", balance: 950000, initial: 1000000 },
-    { id: "d2", name: "Рассрочка", type: "installment", balance: 197500, initial: 197500 },
-    { id: "d3", name: "Долг человеку", type: "person", balance: 100000, initial: 100000 }
-  ],
-  goals: [
-    { id: "g1", name: "Погасить рассрочку", target: 197500, current: 150000 }
-  ],
-  history: [
-    { date: "2026-09-01", type: "income", title: "Зарплата", amount: 300000 },
-    { date: "2026-09-02", type: "debt_payment", title: "Частичный платёж долга", amount: 50000 }
-  ],
-  chartHistory: [-1800000, -1500000, -1247500]
+// Пустое начальное состояние (чистое приложение)
+const emptyState = {
+  cash: 0,
+  savings: 0,
+  debts: [],
+  goals: [],
+  history: [],
+  chartHistory: [0]
 };
 
-// Загрузка или инициализация состояния
-let appState = JSON.parse(localStorage.getItem('financeGameData')) || initialState;
+// Загрузка состояния из памяти браузера
+let appState = JSON.parse(localStorage.getItem('financeGameData')) || emptyState;
 
 function saveData() {
   localStorage.setItem('financeGameData', JSON.stringify(appState));
@@ -35,13 +26,22 @@ const levels = [
   { level: 6, min: 500000, max: Infinity, labelMin: "+500K", labelMax: "+∞" }
 ];
 
-// Главный пересчёт и обновление интерфейса
+// Полный сброс всех данных
+function resetAllData() {
+  if (confirm("Вы уверены, что хотите полностью очистить все данные? Это действие нельзя отменить.")) {
+    localStorage.removeItem('financeGameData');
+    appState = JSON.parse(JSON.stringify(emptyState));
+    saveData();
+  }
+}
+
+// Обновление UI
 function updateUI() {
   const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
   const totalAssets = appState.cash + appState.savings;
   const netBalance = totalAssets - totalDebts;
 
-  // 1. Отображение баланса
+  // 1. Баланс
   const balanceEl = document.getElementById('net-balance');
   balanceEl.innerText = `${netBalance.toLocaleString('ru-RU')} ₸`;
   balanceEl.className = `balance-amount ${netBalance < 0 ? 'negative' : 'positive'}`;
@@ -53,8 +53,8 @@ function updateUI() {
     distEl.innerText = `🏆 Вы в положительном балансе!`;
   }
 
-  // 2. Расчет уровня
-  let currentLvl = levels[2]; // по умолчанию ур.3
+  // 2. Уровень
+  let currentLvl = levels[3];
   for (let l of levels) {
     if (netBalance >= l.min && netBalance < l.max) {
       currentLvl = l;
@@ -66,7 +66,6 @@ function updateUI() {
   document.getElementById('level-min').innerText = currentLvl.labelMin;
   document.getElementById('level-max').innerText = currentLvl.labelMax;
 
-  // Процент внутри уровня
   let percent = 0;
   if (isFinite(currentLvl.min) && isFinite(currentLvl.max)) {
     const range = currentLvl.max - currentLvl.min;
@@ -78,7 +77,7 @@ function updateUI() {
   document.getElementById('level-percent').innerText = `${percent}%`;
   document.getElementById('level-progress-bar').style.width = `${percent}%`;
 
-  // 3. Подведение итогов по категориям
+  // 3. Подсчет категорий долгов
   const credits = appState.debts.filter(d => d.type === 'credit').reduce((s, i) => s + i.balance, 0);
   const installments = appState.debts.filter(d => d.type === 'installment').reduce((s, i) => s + i.balance, 0);
   const people = appState.debts.filter(d => d.type === 'person').reduce((s, i) => s + i.balance, 0);
@@ -87,24 +86,29 @@ function updateUI() {
   document.getElementById('sum-installments').innerText = `${installments.toLocaleString('ru-RU')} ₸`;
   document.getElementById('sum-people').innerText = `${people.toLocaleString('ru-RU')} ₸`;
 
-  // 4. Обновление текущей цели
+  // 4. Активная цель
   if (appState.goals.length > 0) {
     const goal = appState.goals[0];
     const rem = goal.target - goal.current;
     document.getElementById('target-name').innerText = goal.name;
     document.getElementById('target-remaining').innerText = `Осталось ${rem.toLocaleString('ru-RU')} ₸`;
+  } else {
+    document.getElementById('target-name').innerText = "Нет активных целей";
+    document.getElementById('target-remaining').innerText = "Добавьте цель во вкладке Цели";
   }
 
-  // 5. Обновление списков
   renderDebtsList();
   renderHistoryList();
   renderGoalsList();
   renderForecast(netBalance);
 }
 
-// Отрисовка списков
 function renderDebtsList() {
   const container = document.getElementById('debts-list-container');
+  if (appState.debts.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color: var(--text-muted); font-size:13px; margin-top:20px;">У вас пока нет долгов</div>`;
+    return;
+  }
   container.innerHTML = appState.debts.map(d => `
     <div class="list-item">
       <div>
@@ -118,6 +122,10 @@ function renderDebtsList() {
 
 function renderHistoryList() {
   const container = document.getElementById('history-list-container');
+  if (appState.history.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color: var(--text-muted); font-size:13px; margin-top:20px;">История пуста</div>`;
+    return;
+  }
   container.innerHTML = appState.history.slice().reverse().map(h => `
     <div class="list-item">
       <div>
@@ -133,6 +141,10 @@ function renderHistoryList() {
 
 function renderGoalsList() {
   const container = document.getElementById('goals-list-container');
+  if (appState.goals.length === 0) {
+    container.innerHTML = `<div style="text-align:center; color: var(--text-muted); font-size:13px; margin-top:20px;">Список целей пуст</div>`;
+    return;
+  }
   container.innerHTML = appState.goals.map(g => `
     <div class="list-item">
       <div>
@@ -147,24 +159,29 @@ function renderGoalsList() {
 function renderForecast(netBalance) {
   const el = document.getElementById('forecast-text');
   if (netBalance >= 0) {
-    el.innerHTML = "🎉 <b>Вы достигли положительного баланса!</b> Продолжайте инвестировать.";
+    el.innerHTML = "🎉 <b>Вы в плюсе!</b> Формируйте накопления и инвестиции.";
   } else {
-    const monthlyRate = 100000; // Примерный ежемесячный темп гашения
+    const monthlyRate = 100000;
     const months = Math.ceil(Math.abs(netBalance) / monthlyRate);
-    el.innerHTML = `При сохранении динамики гашения ~100 000 ₸/мес вы выйдете в <b>0 ₸</b> примерно через <b>${months} мес.</b>`;
+    el.innerHTML = `При динамике погашения ~100 000 ₸/мес вы выйдете в <b>0 ₸</b> примерно через <b>${months} мес.</b>`;
   }
 }
 
-// Управление модальным окном
-function openModal() {
-  const select = document.getElementById('op-debt-id');
-  select.innerHTML = appState.debts.map(d => `<option value="${d.id}">${d.name} (остаток: ${d.balance.toLocaleString()} ₸)</option>`).join('');
-  document.getElementById('modal-add').classList.add('open');
-  toggleDebtSelector();
+// Модальные окна
+function openModal(id) {
+  if(id === 'modal-add') {
+    const select = document.getElementById('op-debt-id');
+    if (appState.debts.length > 0) {
+      select.innerHTML = appState.debts.map(d => `<option value="${d.id}">${d.name} (${d.balance.toLocaleString()} ₸)</option>`).join('');
+    } else {
+      select.innerHTML = `<option value="">Нет активных долгов</option>`;
+    }
+  }
+  document.getElementById(id).classList.add('open');
 }
 
-function closeModal() {
-  document.getElementById('modal-add').classList.remove('open');
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
 }
 
 function toggleDebtSelector() {
@@ -172,7 +189,46 @@ function toggleDebtSelector() {
   document.getElementById('debt-select-group').style.display = type === 'debt_payment' ? 'block' : 'none';
 }
 
-// Добавление новой транзакции
+// Создание нового долга
+function addNewDebt() {
+  const name = document.getElementById('debt-name').value;
+  const type = document.getElementById('debt-type').value;
+  const amount = Number(document.getElementById('debt-amount').value);
+
+  if (!name || !amount) return alert('Заполните все поля');
+
+  appState.debts.push({
+    id: "d_" + Date.now(),
+    name: name,
+    type: type,
+    balance: amount,
+    initial: amount
+  });
+
+  recalculateChartHistory();
+  closeModal('modal-new-debt');
+  saveData();
+}
+
+// Создание новой цели
+function addNewGoal() {
+  const name = document.getElementById('goal-name').value;
+  const target = Number(document.getElementById('goal-target').value);
+
+  if (!name || !target) return alert('Заполните все поля');
+
+  appState.goals.push({
+    id: "g_" + Date.now(),
+    name: name,
+    target: target,
+    current: 0
+  });
+
+  closeModal('modal-new-goal');
+  saveData();
+}
+
+// Пополнение / расход / погашение
 function submitTransaction() {
   const type = document.getElementById('op-type').value;
   const amount = Number(document.getElementById('op-amount').value);
@@ -183,16 +239,13 @@ function submitTransaction() {
   if (type === 'debt_payment') {
     const debtId = document.getElementById('op-debt-id').value;
     const debt = appState.debts.find(d => d.id === debtId);
-    if (debt) {
-      debt.balance = Math.max(0, debt.balance - amount);
-    }
+    if (debt) debt.balance = Math.max(0, debt.balance - amount);
   } else if (type === 'income') {
     appState.cash += amount;
   } else if (type === 'expense') {
     appState.cash -= amount;
   }
 
-  // Фиксация в истории
   appState.history.push({
     date: new Date().toISOString().split('T')[0],
     type: type,
@@ -200,16 +253,17 @@ function submitTransaction() {
     amount: amount
   });
 
-  // Расчет нового баланса для графика
-  const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
-  const totalAssets = appState.cash + appState.savings;
-  appState.chartHistory.push(totalAssets - totalDebts);
-
-  closeModal();
+  recalculateChartHistory();
+  closeModal('modal-add');
   saveData();
 }
 
-// Переключение вкладок
+function recalculateChartHistory() {
+  const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
+  const totalAssets = appState.cash + appState.savings;
+  appState.chartHistory.push(totalAssets - totalDebts);
+}
+
 function switchTab(tabId, element) {
   document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -222,7 +276,6 @@ function switchTab(tabId, element) {
   }
 }
 
-// Отрисовка графика Chart.js с нулевой линией посередине
 let chartInstance = null;
 function renderChart() {
   if (chartInstance) chartInstance.destroy();
@@ -232,7 +285,7 @@ function renderChart() {
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: appState.chartHistory.map((_, i) => `Шаг ${i + 1}`),
+      labels: appState.chartHistory.map((_, i) => `${i + 1}`),
       datasets: [{
         label: 'Чистый баланс (₸)',
         data: appState.chartHistory,
@@ -265,5 +318,4 @@ function renderChart() {
   });
 }
 
-// Инициализация при запуске
 updateUI();
