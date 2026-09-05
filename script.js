@@ -1,4 +1,3 @@
-```javascript
 // ==========================================
 // FINANCE QUEST
 // ==========================================
@@ -408,8 +407,7 @@ function updateDebts() {
 
 
     container.innerHTML = debts.map(debt => {
-
-        return 
+        return `
             <div class="debt">
                 <div class="debt-top">
                     <div class="debt-name">
@@ -427,7 +425,8 @@ function updateDebts() {
                 </button>
             </div>
         `;
-    join("");
+    }).join("");
+}
 
 
 // ==========================================
@@ -453,6 +452,8 @@ function payDebt(id) {
 
     if (!payment || payment <= 0) return;
 
+    const debtName = debt.name;
+
 
     if (payment >= debt.amount) {
 
@@ -473,7 +474,7 @@ function payDebt(id) {
 
         type: "expense",
 
-        name: `Погашение: ${debt.name}`,
+        name: `Погашение: ${debtName}`,
 
         amount: payment,
 
