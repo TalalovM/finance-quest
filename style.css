@@ -46,13 +46,8 @@ body {
   padding: 24px 20px 100px;
 }
 
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 .header-title {
   font-size: 13px;
@@ -80,7 +75,6 @@ body {
   margin-bottom: 20px;
 }
 
-/* Игровая шкала прогресса */
 .level-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -133,7 +127,6 @@ body {
   margin-bottom: 20px;
 }
 
-/* Грид с карточками долгов */
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -153,7 +146,6 @@ body {
 .debt-card .title { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
 .debt-card .val { font-size: 12px; font-weight: 700; }
 
-/* Карточка цели */
 .target-card, .forecast-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -167,7 +159,6 @@ body {
 .target-remaining { font-size: 13px; color: var(--accent-green); }
 .forecast-text { font-size: 14px; line-height: 1.4; }
 
-/* Кнопка */
 .btn-add {
   width: 100%;
   padding: 16px;
@@ -181,9 +172,34 @@ body {
   box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
 }
 
-.btn-add:active { transform: scale(0.98); }
+.btn-secondary {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
 
-/* Элементы списков */
+.btn-danger {
+  width: 100%;
+  padding: 14px;
+  background-color: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 12px;
+  color: var(--accent-red);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 24px;
+}
+
+.btn-add:active, .btn-secondary:active, .btn-danger:active { transform: scale(0.98); }
+
 .list-container { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .list-item {
   background-color: var(--card-bg);
@@ -198,7 +214,6 @@ body {
 .list-item .item-sub { font-size: 11px; color: var(--text-muted); }
 .list-item .item-val { font-weight: 700; font-size: 14px; }
 
-/* Нижнее меню */
 .bottom-nav {
   position: absolute;
   bottom: 0;
@@ -226,7 +241,6 @@ body {
 .nav-item.active { color: var(--accent-green); }
 .nav-item .icon { font-size: 18px; margin-bottom: 4px; }
 
-/* Модальное окно */
 .modal-overlay {
   display: none;
   position: absolute;
@@ -281,5 +295,5 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 16px;
-  height: 280px;
+  height: 250px;
 }
