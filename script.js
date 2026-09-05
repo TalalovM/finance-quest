@@ -1,7 +1,8 @@
-// Пустое начальное состояние (чистое приложение)
+// Начальное пустое состояние
 const emptyState = {
   cash: 0,
   savings: 0,
+  monthlyPayoffRate: 100000, // Динамика погашения по умолчанию
   debts: [],
   goals: [],
   history: [],
@@ -10,6 +11,10 @@ const emptyState = {
 
 // Загрузка состояния из памяти браузера
 let appState = JSON.parse(localStorage.getItem('financeGameData')) || emptyState;
+
+if (!appState.monthlyPayoffRate) {
+  appState.monthlyPayoffRate = 100000;
+}
 
 function saveData() {
   localStorage.setItem('financeGameData', JSON.stringify(appState));
@@ -32,6 +37,18 @@ function resetAllData() {
     localStorage.removeItem('financeGameData');
     appState = JSON.parse(JSON.stringify(emptyState));
     saveData();
+  }
+}
+
+// Изменение суммы динамики погашения пользователем
+function changeMonthlyRate(value) {
+  const rate = Number(value);
+  if (rate >= 0) {
+    appState.monthlyPayoffRate = rate;
+    localStorage.setItem('financeGameData', JSON.stringify(appState));
+    const totalDebts = appState.debts.reduce((sum, item) => sum + item.balance, 0);
+    const totalAssets = appState.cash + appState.savings;
+    renderForecast(totalAssets - totalDebts);
   }
 }
 
@@ -97,6 +114,10 @@ function updateUI() {
     document.getElementById('target-remaining').innerText = "Добавьте цель во вкладке Цели";
   }
 
+  // Обновление поля темпа гашения
+  const rateInput = document.getElementById('monthly-rate-input');
+  if (rateInput) rateInput.value = appState.monthlyPayoffRate;
+
   renderDebtsList();
   renderHistoryList();
   renderGoalsList();
@@ -156,14 +177,19 @@ function renderGoalsList() {
   `).join('');
 }
 
+// Пересчет прогноза с использованием пользовательской суммы
 function renderForecast(netBalance) {
   const el = document.getElementById('forecast-text');
   if (netBalance >= 0) {
     el.innerHTML = "🎉 <b>Вы в плюсе!</b> Формируйте накопления и инвестиции.";
   } else {
-    const monthlyRate = 100000;
+    const monthlyRate = appState.monthlyPayoffRate || 100000;
+    if (monthlyRate <= 0) {
+      el.innerHTML = "Укажите сумму гашения больше 0 ₸, чтобы рассчитать прогноз.";
+      return;
+    }
     const months = Math.ceil(Math.abs(netBalance) / monthlyRate);
-    el.innerHTML = `При динамике погашения ~100 000 ₸/мес вы выйдете в <b>0 ₸</b> примерно через <b>${months} мес.</b>`;
+    el.innerHTML = `При динамике гашения <b>${monthlyRate.toLocaleString('ru-RU')} ₸/мес</b> вы выйдете в <b>0 ₸</b> примерно через <b>${months} мес.</b>`;
   }
 }
 
