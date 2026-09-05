@@ -84,20 +84,29 @@
         <div id="goals-list-container" class="list-container"></div>
       </div>
 
-      <!-- ЭКРАН 5: СТАТИСТИКА И НАСТРОЙКИ -->
+          <!-- ЭКРАН 5: СТАТИСТИКА И НАСТРОЙКИ -->
       <div id="stats-tab" class="tab-content">
         <div class="header-title">СТАТИСТИКА И ПРОГНОЗ</div>
+        
         <div class="forecast-card">
           <div class="forecast-title">🔮 Прогноз выхода из долгов</div>
+          
+          <!-- Инпут для выбора динамики погашения -->
+          <div class="form-group" style="margin-top: 10px; margin-bottom: 12px;">
+            <label>Предполагаемый темп гашения (₸/мес):</label>
+            <input type="number" id="monthly-rate-input" value="100000" step="5000" oninput="changeMonthlyRate(this.value)" />
+          </div>
+
           <div class="forecast-text" id="forecast-text">Расчет данных...</div>
         </div>
+
         <div class="chart-container">
           <canvas id="financeChart"></canvas>
         </div>
 
-        <!-- Кнопка полной очистки данных -->
         <button class="btn-danger" onclick="resetAllData()">🗑 Очистить все данные</button>
       </div>
+
 
     </div>
 
